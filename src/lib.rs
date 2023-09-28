@@ -1,5 +1,5 @@
 use std::error::Error;
-use std::{env, fs};
+use std::{env, fs, process};
 
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
     let contents = fs::read_to_string(config.file_path)?;
@@ -23,19 +23,31 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn from(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("not enough arguments");
+    pub fn from(args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        let mut ignore_case = env::var("IGNORE_CASE").map_or(false, |x| x.eq("1"));
+
+        let mut args = args.peekable();
+        args.next();
+
+        while let Some(s) = args.next_if(|x| x.starts_with("-")) {
+            match s.as_str() {
+                "-i" | "--ignore_case" => ignore_case = true,
+                _ => {
+                    eprintln!("invalid parameter");
+                    process::exit(1);
+                }
+            }
         }
-        let query = args[1].clone();
-        let file_path = args[2].clone();
-        let ignore_case = env::var("IGNORE_CASE").map_or_else(
-            |_| {
-                args.iter()
-                    .any(|arg| arg.to_lowercase() == "-i" || arg.to_lowercase() == "--ignore-case")
-            },
-            |v| v == "1" || v.to_lowercase() == "true", // if env U=IGNORE_CASE exist, check his value
-        );
+
+        let query = match args.next() {
+            Some(arg) => arg,
+            None => return Err("no parameter query"),
+        };
+
+        let file_path = match args.next() {
+            Some(arg) => arg,
+            None => return Err("no parameter file_path"),
+        };
 
         Ok(Config {
             query,
