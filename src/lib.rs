@@ -24,12 +24,12 @@ pub struct Config {
 
 impl Config {
     pub fn from(args: impl Iterator<Item = String>) -> Result<Config, &'static str> {
-        let mut ignore_case = env::var("IGNORE_CASE").map_or(false, |x| x.eq("1"));
+        let mut ignore_case = env::var("IGNORE_CASE").map_or(false, |x| x == "1");
 
         let mut args = args.peekable();
         args.next();
 
-        while let Some(s) = args.next_if(|x| x.starts_with("-")) {
+        while let Some(s) = args.next_if(|x: &String| x.starts_with("-")) {
             match s.as_str() {
                 "-i" | "--ignore_case" => ignore_case = true,
                 _ => {
